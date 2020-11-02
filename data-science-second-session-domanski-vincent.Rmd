@@ -1,0 +1,104 @@
+---
+title: "Data Science 2. Session"
+output: html_notebook_data_science_second_session
+---
+
+# Libraries und Daten laden
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+books <- BX_Books %>%
+  select(ISBN,`Book-Title`,`Book-Author`,`Year-Of-Publication`,Publisher)
+```
+
+<h1>Aufgabe 1: Eine Lineare Beziehung zwischen Anzahl Bücher pro Publisher und Anzahl Ratings, die die Bücher eines Publishers erhalten. </h1>
+
+<p>Herausfinden der Bücheranzahlen in Bezug auf den Publisher:</p>
+```{r}
+(book_rating <- books %>%
+                  group_by(Publisher) %>%
+                  summarise(buecher_publisher = n()) %>%
+                  arrange(desc(buecher_publisher))
+)
+```
+
+<p>Sammlung der Anzahl der Bewertungen nach Publisher:</p>
+```{r}
+(book_bewertung <- merge(BX_Book_Ratings, BX_Books) %>%
+                    group_by(Publisher) %>%
+                    filter(`Book-Rating` > 0) %>%
+                    summarise(bewertungen_publisher = n()) %>%
+                    arrange(desc(bewertungen_publisher)) 
+)
+```
+
+<p>Zusammenfassen der beiden erarbeiteten Daten und Filterung für die Weiterarbeit mit Linear Models:</p>
+```{r}
+(publisher_relations <- full_join(book_rating, book_bewertung) %>%
+                        select(buecher_publisher, bewertungen_publisher)
+)
+```
+
+<p> Um eine Streuung und eine Annäherung an eine lineare Gerade zu erhalten werden nun die Werte zusammengefasst:</p>
+```{r}
+lm(publisher_relations$buecher_publisher ~ publisher_relations$bewertungen_publisher)
+```
+
+```{r}
+fit <- lm(publisher_relations$buecher_publisher ~ publisher_relations$bewertungen_publisher)
+```
+
+```{r}
+plot(publisher_relations)
+abline(fit)
+```
+
+<p>Um eine bessere Übersicht über die Abhängigkeit von bücher/ Publisher zu Bewertungen/ Publisher zu erhalten, verändern wir den Definitionsbereich auf [500;500]:</p>
+```{r}
+plot(publisher_relations, xlim = c(0, 500), ylim = c(0, 500))
+abline(fit)
+```
+
+<p> Anhand der Eingrenzung des Definitionsbereiches lässt sich schließen, dass man die Angaben der linearen Gerade durch das Ergebnis R-squared: 0.6823 annehmen kann und eine lineare Beziehung der beiden Ereignisse vorhanden ist. Es herrscht zwar keine eindeutige lineare Beziehung, dennoch ist es annehmbar, dass eine existiert. </p>
+
+```{r}
+summary(fit)
+```
+
+<h1> Aufgabe 2: Ältere Bücher besitzen mehr Bewertungen</h1>
+
+```{r}
+(book_bewertungen <- merge(BX_Book_Ratings, BX_Books) %>%
+                    group_by(`Book-Title`) %>%
+                    filter(`Book-Rating` > 0) %>%
+                    summarise(bewertungen_books = n()) %>%
+                    arrange(desc(bewertungen_books))
+)
+```
+
+<p>Vorbereitung auf die Visualisierung der Daten in einer Grafik mit R</p>
+
+```{r}
+(book_zeitraum <- full_join(book_bewertungen, BX_Books) %>%
+  select(bewertungen_books, `Year-Of-Publication`) %>%
+  filter(`Year-Of-Publication` > 1850, `Year-Of-Publication` < 2022)
+)
+```
+
+```{r}
+fit_year <- lm(book_zeitraum$bewertungen_books ~ book_zeitraum$`Year-Of-Publication`)
+```
+
+```{r}
+plot(book_zeitraum)
+abline(fit_year)
+```
+
+```{r}
+summary(fit_year)
+```
+
+<p> Anhand der Grafik erkennt man, dass öfter mehr Bewertungen bei Büchern getätigt wurden, die neuer sind. Das lässt sich vielleicht anhand der Funktion der Bewertungen erklären, welche es vor einiger Zeit sicherlich noch nicht bei Amazon gab. Das Unternehmen selber wurde im Jahre 1994 gegründet und hat ihr "Verkaufs- und Aufmerksamkeitshoch" in den letzten Jahren erreicht. Somit ist es realistisch, dass die Anzahl an Bewertungen in den letzten Jahren höher ist, als in den vorigen. Die Aussage der Aufgabe ist somit falsch. </p>
